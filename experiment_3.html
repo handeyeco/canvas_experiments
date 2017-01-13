@@ -32,23 +32,46 @@
 var container,
     canvas,
     ctx,
-    // cube,
-    shade,
+    cord =[],
     bounds, mouse = {},
-    rows = 30,
-    cols = 30,
-    cubeDim = 20,
-    radius = cubeDim * 3,
+    rows = 100,
+    cols = 100,
+    cubeDim = 10,
     cubeCount = rows * cols,
-    cubeX, cubeY,
-    canvasDim = cubeDim * rows
-    cubeList = [];
+    date,
+    manual = false,
+    triCount = 0,
+    canvasDim = cubeDim * rows,
+    triList = [];
 
-function Cube(i, x, y) {
+function Tri(i, x, y) {
   this.i = i;
+  // 90 degree angle
   this.x = x;
   this.y = y;
   this.active = false;
+  this.opacity = 1;
+  this.even = i % 2 == 0;
+
+  if (this.even) {
+    // Coord to the right
+    this.a = x + cubeDim;
+    this.b = y;
+    // Coord to the bottom
+    this.m = x;
+    this.n = y + cubeDim;
+  } else {
+    // Coord to the left
+    this.a = x - cubeDim;
+    this.b = y;
+    // Coord to the top
+    this.m = x;
+    this.n = y - cubeDim;
+  }
+}
+
+Tri.prototype.activate = function () {
+  this.active = true;
   this.opacity = 1;
 }
 
@@ -62,14 +85,18 @@ function initialize() {
   container.style.marginTop = Math.round(canvasDim * -0.5) + 'px';
 
   for (var i = 0; i < cubeCount; i++) {
-    cubeX = cubeDim * (i % cols);
-    cubeY = Math.floor(i / cols) * cubeDim;
+    cord[0] = cubeDim * (i % cols);
+    cord[1] = Math.floor(i / cols) * cubeDim;
+    triList.push(new Tri(triCount++, ...cord));
 
-    cubeList.push(new Cube(i, cubeX, cubeY));
+    cord[0] += cubeDim;
+    cord[1] += cubeDim;
+    triList.push(new Tri(triCount++, ...cord));
   }
 
   //Add mousemove to container
   container.addEventListener('mousemove', function(e) {
+      manual = true;
       bounds = container.getBoundingClientRect();
       mouse.x = e.clientX - bounds.left;
       mouse.y = e.clientY - bounds.top;
@@ -81,26 +108,52 @@ function initialize() {
 }
 
 function step() {
-  cubeList.forEach((cube) => {
-    if (mouse.x > cube.x && mouse.x < cube.x + cubeDim && mouse.y > cube.y && mouse.y < cube.y + cubeDim) {
-      cube.active = true;
-      cube.opacity = 1;
+  triList.forEach((tri) => {
+    if (manual) {
+      if (tri.even) {
+        if ((mouse.x > tri.x && mouse.x < tri.x + cubeDim / 2) && (mouse.y > tri.y && mouse.y < tri.y + cubeDim / 2)) {
+          tri.activate()
+        }
+      } else {
+        if ((mouse.x < tri.x && mouse.x > tri.x - cubeDim / 2) && (mouse.y < tri.y && mouse.y > tri.y - cubeDim / 2)) {
+          tri.activate();
+        }
+      }
+    }
+    else {
+      date = new Date();
+      date = date.getMilliseconds();
+      if (date > 2 && tri.i % date == 0) {
+        tri.activate();
+      }
     }
 
-    if (cube.opacity <= 0.04) {
-      cube.active = false;
-      cube.opacity = 1;
+    if (tri.opacity <= 0.04) {
+      tri.active = false;
     }
 
-    if (cube.active) {
-      ctx.clearRect(cube.x, cube.y, cubeDim, cubeDim);
-      ctx.fillStyle = `rgba(43,94,121,${cube.opacity})`;
-      ctx.fillRect(cube.x, cube.y, cubeDim, cubeDim);
+    if (tri.active) {
+      // console.log(tri.i);
+      ctx.clearRect(tri.x, tri.y, cubeDim, cubeDim);
 
-      cube.opacity -= 0.001;
+      if (date % tri.i == 42) {
+        ctx.fillStyle = `rgba(94,121,42,${tri.opacity})`;
+      } else if (date % tri.i == 87) {
+        ctx.fillStyle = `rgba(121,43,94,${tri.opacity})`;
+      } else {
+        ctx.fillStyle = `rgba(43,94,121,${tri.opacity})`;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(tri.x, tri.y);
+      ctx.lineTo(tri.a, tri.b);
+      ctx.lineTo(tri.m, tri.n);
+      ctx.fill();
+
+      tri.opacity -= 0.001;
     } else {
       ctx.fillStyle = `white`;
-      ctx.fillRect(cube.x, cube.y, cubeDim, cubeDim);
+      ctx.fillRect(tri.x, tri.y, cubeDim, cubeDim);
     }
   });
 
