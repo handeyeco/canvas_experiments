@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Canvas Tutorial</title>
+
+    <style>
+        html,
+        body {
+            background: white;
+        }
+
+        #container {
+            background: white;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+        }
+        canvas {
+          border: 1px solid;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+</body>
+
+<script>
+
+var container,
+    canvas,
+    ctx,
+    shade,
+    bounds, mousex, mousey,
+    rows = 10,
+    cols = 10,
+    cubeDim = 40,
+    cubeCount = rows * cols,
+    cubeX, cubeY,
+    canvasDim = cubeDim * rows;
+
+function initialize() {
+  container = document.getElementById('container');
+  canvas = document.createElement('canvas');
+  ctx = canvas.getContext('2d');
+
+  canvas.width = canvas.height = canvasDim;
+  container.style.marginLeft = Math.round(canvasDim * -0.5) + 'px';
+  container.style.marginTop = Math.round(canvasDim * -0.5) + 'px';
+
+  for (var i = 0; i < cubeCount; i++) {
+    cubeX = cubeDim * (i % cols);
+    cubeY = Math.floor(i / cols) * cubeDim;
+
+    ctx.fillStyle = `black`;
+    console.log(ctx.fillStyle);
+    ctx.fillRect(cubeX, cubeY, cubeDim, cubeDim);
+  }
+
+  //Add mousemove to container
+  container.addEventListener('mousemove', function(e) {
+      //Figure out where the mouse is
+      //e.clientx determines where the mouse is from the left of the window
+      //bounds determines where the container is relative to the window
+      //mousex is where the mouse is in the container
+      bounds = container.getBoundingClientRect();
+      mousex = e.clientX - bounds.left;
+      mousey = e.clientY - bounds.top;
+  });
+
+  container.appendChild(canvas);
+
+  window.requestAnimationFrame(step);
+}
+
+function step() {
+  for (var i = 0; i < cubeCount; i++) {
+    cubeX = cubeDim * (i % cols);
+    cubeY = Math.floor(i / cols) * cubeDim;
+
+    if ((mousex > cubeX && mousex < cubeX + cubeDim) && (mousey > cubeY && mousey < cubeY + cubeDim)) {
+      ctx.fillStyle = `rgb(${cubeX},${i%35===0?100:0},${cubeY})`;
+    } else {
+      ctx.fillStyle = 'white';
+    }
+
+    // console.log(ctx.fillStyle);
+    ctx.fillRect(cubeX, cubeY, cubeDim, cubeDim);
+  }
+
+  window.requestAnimationFrame(step);
+}
+
+initialize();
+
+</script>
+
+</html>
