@@ -13,12 +13,9 @@
 
         #container {
             background: white;
-            position: absolute;
-            left: 50%;
-            top: 50%;
-        }
-        canvas {
-          border: 1px solid;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
     </style>
 </head>
@@ -28,99 +25,131 @@
 </body>
 
 <script>
+(function Glitch() {
 
-var container,
-    canvas,
+//Initialize variables
+var container = {},
+    canvas = {},
+    cubes = {coord: []},
+    tris = {count: 0, list: []},
+    mouse = {},
     ctx,
-    cord =[],
-    bounds, mouse = {},
-    rows = 100,
-    cols = 100,
-    cubeDim = 10,
-    cubeCount = rows * cols,
     date,
     manual = false,
-    triCount = 0,
-    canvasDim = cubeDim * rows,
-    triList = [];
+    maxWin;
 
+//Constructor for Triangles
 function Tri(i, x, y) {
+  //Unique indentifier
   this.i = i;
-  // 90 degree angle
-  this.x = x;
-  this.y = y;
+
+  //State of the Tri
+  this.even = i % 2 == 0;
   this.active = false;
   this.opacity = 1;
-  this.even = i % 2 == 0;
 
+  //Coordinates of angles
+  //Starting wit 90 degree
+  this.x = x;
+  this.y = y;
+
+  //Other two Coordinates
+  //depend on if the hypotenuse
+  //is up or down
   if (this.even) {
     // Coord to the right
-    this.a = x + cubeDim;
+    this.a = x + cubes.dimension;
     this.b = y;
     // Coord to the bottom
     this.m = x;
-    this.n = y + cubeDim;
+    this.n = y + cubes.dimension;
   } else {
     // Coord to the left
-    this.a = x - cubeDim;
+    this.a = x - cubes.dimension;
     this.b = y;
     // Coord to the top
     this.m = x;
-    this.n = y - cubeDim;
+    this.n = y - cubes.dimension;
   }
 }
 
+//Helper function to reset Tri and activate it
 Tri.prototype.activate = function () {
   this.active = true;
   this.opacity = 1;
 }
 
+function setDimensions() {
+  //Pick the higher of width and height
+  maxWin = Math.max(window.innerHeight, window.innerWidth);
+  //Determine the size of the cubes
+  cubes.dimension = maxWin / 30;
+  //Set the number of rows and columns
+  cubes.rows = cubes.cols = (maxWin / cubes.dimension);
+  //Determine the number of cubes
+  cubes.count = cubes.rows * cubes.cols;
+  //Set the size of the canvas element
+  canvas.dimension = cubes.dimension * cubes.rows;
+}
+
 function initialize() {
-  container = document.getElementById('container');
-  canvas = document.createElement('canvas');
-  ctx = canvas.getContext('2d');
+  //Init canvas
+  container.self = document.getElementById('container');
+  canvas.self = document.createElement('canvas');
+  ctx = canvas.self.getContext('2d');
 
-  canvas.width = canvas.height = canvasDim;
-  container.style.marginLeft = Math.round(canvasDim * -0.5) + 'px';
-  container.style.marginTop = Math.round(canvasDim * -0.5) + 'px';
+  //Set canvas size
+  canvas.self.width = canvas.self.height = canvas.dimension;
 
-  for (var i = 0; i < cubeCount; i++) {
-    cord[0] = cubeDim * (i % cols);
-    cord[1] = Math.floor(i / cols) * cubeDim;
-    triList.push(new Tri(triCount++, ...cord));
+  //Interate over cubes and create two tris each
+  for (var i = 0; i < cubes.count; i++) {
+    //Top tri
+    cubes.coord[0] = cubes.dimension * (i % cubes.cols);
+    cubes.coord[1] = Math.floor(i / cubes.cols) * cubes.dimension;
+    tris.list.push(new Tri(tris.count++, ...cubes.coord));
 
-    cord[0] += cubeDim;
-    cord[1] += cubeDim;
-    triList.push(new Tri(triCount++, ...cord));
+    //Bottom tri
+    cubes.coord[0] += cubes.dimension;
+    cubes.coord[1] += cubes.dimension;
+    tris.list.push(new Tri(tris.count++, ...cubes.coord));
   }
 
   //Add mousemove to container
-  container.addEventListener('mousemove', function(e) {
-      manual = true;
-      bounds = container.getBoundingClientRect();
-      mouse.x = e.clientX - bounds.left;
-      mouse.y = e.clientY - bounds.top;
+  container.self.addEventListener('mousemove', function(e) {
+    //Change to manual mode when mouse moves
+    manual = true;
+
+    //Determine where mouse is
+    container.bounds = container.self.getBoundingClientRect();
+    mouse.x = e.clientX - container.bounds.left;
+    mouse.y = e.clientY - container.bounds.top;
   });
 
-  container.appendChild(canvas);
-
-  window.requestAnimationFrame(step);
+  container.self.appendChild(canvas.self);
 }
 
+//Do this each frame
 function step() {
-  triList.forEach((tri) => {
+  tris.list.forEach((tri) => {
+    //If in manual mode
     if (manual) {
+      //If tri is on top
       if (tri.even) {
-        if ((mouse.x > tri.x && mouse.x < tri.x + cubeDim / 2) && (mouse.y > tri.y && mouse.y < tri.y + cubeDim / 2)) {
+        //Determine if mouse is in square inside of triangle
+        //if so, activate it
+        if ((mouse.x > tri.x && mouse.x < tri.x + cubes.dimension / 2) && (mouse.y > tri.y && mouse.y < tri.y + cubes.dimension / 2)) {
           tri.activate()
         }
+      //Same thing for bottom tri
       } else {
-        if ((mouse.x < tri.x && mouse.x > tri.x - cubeDim / 2) && (mouse.y < tri.y && mouse.y > tri.y - cubeDim / 2)) {
+        if ((mouse.x < tri.x && mouse.x > tri.x - cubes.dimension / 2) && (mouse.y < tri.y && mouse.y > tri.y - cubes.dimension / 2)) {
           tri.activate();
         }
       }
     }
+    //If in auto mode
     else {
+      //Semi-randomly grab tris and activate them
       date = new Date();
       date = date.getMilliseconds();
       if (date > 2 && tri.i % date == 0) {
@@ -128,39 +157,54 @@ function step() {
       }
     }
 
+    //Deactive tri when it's faded out
     if (tri.opacity <= 0.04) {
       tri.active = false;
     }
 
+    //If try is active
     if (tri.active) {
-      // console.log(tri.i);
-      ctx.clearRect(tri.x, tri.y, cubeDim, cubeDim);
+      //Clear pixels so they can be redrawn at different opacity
+      ctx.clearRect(tri.x, tri.y, cubes.dimension, cubes.dimension);
 
+      //Randomly change colors
       if (date % tri.i == 42) {
+        //Green
         ctx.fillStyle = `rgba(94,121,42,${tri.opacity})`;
       } else if (date % tri.i == 87) {
+        //Purple
         ctx.fillStyle = `rgba(121,43,94,${tri.opacity})`;
       } else {
+        //But default to blue
         ctx.fillStyle = `rgba(43,94,121,${tri.opacity})`;
       }
 
+      //Draw the trangles
       ctx.beginPath();
       ctx.moveTo(tri.x, tri.y);
       ctx.lineTo(tri.a, tri.b);
       ctx.lineTo(tri.m, tri.n);
       ctx.fill();
 
+      //Start fading out
       tri.opacity -= 0.001;
     } else {
-      ctx.fillStyle = `white`;
-      ctx.fillRect(tri.x, tri.y, cubeDim, cubeDim);
+      //Set deactive tris to white so they don't pop up later
+      ctx.fillStyle = 'white';
+      ctx.fillRect(tri.x, tri.y, cubes.dimension, cubes.dimension);
     }
   });
 
+  //Request next frame
   window.requestAnimationFrame(step);
 }
 
+//Start the program
+setDimensions();
 initialize();
+window.requestAnimationFrame(step);
+
+})();
 
 </script>
 
